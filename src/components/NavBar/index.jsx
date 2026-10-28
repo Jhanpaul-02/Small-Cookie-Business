@@ -1,6 +1,6 @@
 import './styles.css'
 
-export default function NavBar() {
+export default function NavBar({ boxCount = 0 }) {
   return (
     <>
       <div className="announcement-bar">
@@ -58,7 +58,7 @@ export default function NavBar() {
                 strokeLinecap="round"
               />
             </svg>
-            <span>Your box · 0</span>
+            <span>Your box · {boxCount}</span>
           </div>
         </div>
       </header>
