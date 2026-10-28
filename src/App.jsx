@@ -2,6 +2,7 @@ import { useState } from 'react'
 import NavBar from './components/NavBar'
 import Homepage from './components/Homepage'
 import ShopPage from './page/Shop page'
+import HowToOrder from './components/HowToOrder'
 
 function App() {
   const [boxQuantities, setBoxQuantities] = useState({})
@@ -25,6 +26,7 @@ function App() {
         boxQuantities={boxQuantities}
         onQuantityChange={handleQuantityChange}
       />
+      <HowToOrder />
     </>
   )
 }
