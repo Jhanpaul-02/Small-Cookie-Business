@@ -1,0 +1,126 @@
+.site-footer {
+  color: rgba(255, 253, 249, 0.9);
+  background: #38261f;
+}
+
+.site-footer__inner {
+  width: min(1040px, calc(100% - 48px));
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: 28px;
+  margin-inline: auto;
+  padding-block: 17px;
+}
+
+.footer-brand {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.footer-brand svg {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  color: #f5e8d7;
+}
+
+.footer-brand > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.footer-brand strong {
+  color: #fffdf9;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.22rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.footer-brand small {
+  color: rgba(255, 253, 249, 0.65);
+  font-size: 0.46rem;
+  letter-spacing: 0.09em;
+}
+
+.footer-contact {
+  justify-self: center;
+}
+
+.footer-contact > span {
+  color: #fffdf9;
+  font-size: 0.64rem;
+}
+
+.footer-contact p,
+.footer-meta p {
+  margin: 5px 0 0;
+  color: rgba(255, 253, 249, 0.65);
+  font-size: 0.56rem;
+}
+
+.footer-meta {
+  justify-self: end;
+  text-align: right;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  color: #fffdf9;
+  font-size: 0.6rem;
+}
+
+.footer-links span[aria-hidden="true"] {
+  color: rgba(255, 253, 249, 0.55);
+}
+
+@media (max-width: 760px) {
+  .site-footer__inner {
+    width: calc(100% - 40px);
+    grid-template-columns: 1fr auto;
+    row-gap: 16px;
+    padding-block: 20px;
+  }
+
+  .footer-contact {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .footer-meta {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-footer__inner {
+    width: calc(100% - 36px);
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+
+  .footer-contact,
+  .footer-meta {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .footer-links {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import NavBar from './components/NavBar'
 import Homepage from './components/Homepage'
+import Footer from './components/Footer'
 import ShopPage from './page/Shop page'
 import HowToOrder from './components/HowToOrder'
 
@@ -27,6 +28,7 @@ function App() {
         onQuantityChange={handleQuantityChange}
       />
       <HowToOrder />
+      <Footer />
     </>
   )
 }
