@@ -1,48 +1,85 @@
-import cookiesPhoto from '../../assets/cookies-hero.jpg'
-import './styles.css'
+import { useEffect, useRef, useState } from "react";
+import cookiesPhoto from "../../assets/cookies-hero.jpg";
+import "./styles.css";
 
 const products = [
   {
-    id: 'cookies',
-    name: 'Cookies',
-    description: 'A box of freshly baked cookies, ready to share.',
+    id: "cookies",
+    name: "Cookies",
+    description: "A box of freshly baked cookies, ready to share.",
     price: 200,
-    style: 'cookies',
+    style: "cookies",
   },
   {
-    id: 'crinkles',
-    name: 'Crinkles',
-    description: 'A box of soft, chocolatey crinkles.',
+    id: "crinkles",
+    name: "Crinkles",
+    description: "A box of soft, chocolatey crinkles.",
     price: 200,
-    style: 'crinkles',
+    style: "crinkles",
   },
   {
-    id: 'smores',
+    id: "smores",
     name: "S'mores Cookies",
-    description: 'A sweet cookie box inspired by the campfire favorite.',
+    description: "A sweet cookie box inspired by the campfire favorite.",
     price: 270,
-    style: 'smores',
+    style: "smores",
   },
-]
+];
 
 function formatPrice(amount) {
-  return `₱${amount.toLocaleString('en-PH')}`
+  return `₱${amount.toLocaleString("en-PH")}`;
 }
 
 export default function ShopPage({ boxQuantities, onQuantityChange }) {
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [fulfillment, setFulfillment] = useState("");
+  const [detailsChecked, setDetailsChecked] = useState(false);
+  const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [customerDetails, setCustomerDetails] = useState({
+    name: "",
+    phone: "",
+    address: "",
+  });
+
   const selectedProducts = products.filter(
     (product) => (boxQuantities[product.id] ?? 0) > 0,
-  )
+  );
   const totalBoxes = products.reduce(
     (total, product) => total + (boxQuantities[product.id] ?? 0),
     0,
-  )
+  );
   const boxTotal = products.reduce(
     (total, product) =>
       total + product.price * (boxQuantities[product.id] ?? 0),
     0,
-  )
+  );
 
+  const checkoutDialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = checkoutDialogRef.current;
+
+    if (!dialog) return;
+
+    if (showCheckout && !dialog.open) {
+      dialog.showModal();
+    } else if (!showCheckout && dialog.open) {
+      dialog.close();
+    }
+  }, [showCheckout]);
+
+  function handleCustomerDetailsChange(event) {
+    const { name, value } = event.target;
+
+    setCustomerDetails((currentDetails) => ({
+      ...currentDetails,
+      [name]: value,
+    }));
+  }
+  function handleCheckoutSubmit(event) {
+    event.preventDefault();
+    setDetailsChecked(true);
+  }
   return (
     <section className="shop-page" id="cookies" aria-labelledby="shop-heading">
       <div className="shop-page__inner">
@@ -71,18 +108,22 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
               strokeLinejoin="round"
             />
           </svg>
-          <span>Next batch: <strong>coming soon</strong></span>
+          <span>
+            Next batch: <strong>coming soon</strong>
+          </span>
         </p>
       </div>
 
       <div className="shop-page__content">
         <div className="shop-products" aria-label="Cookie boxes">
           {products.map((product) => {
-            const quantity = boxQuantities[product.id] ?? 0
+            const quantity = boxQuantities[product.id] ?? 0;
 
             return (
               <article className="shop-product" key={product.id}>
-                <div className={`shop-product__visual shop-product__visual--${product.style}`}>
+                <div
+                  className={`shop-product__visual shop-product__visual--${product.style}`}
+                >
                   <img src={cookiesPhoto} alt="" />
                   <span>SMALL BATCH</span>
                 </div>
@@ -119,7 +160,7 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
                   </div>
                 </div>
               </article>
-            )
+            );
           })}
         </div>
 
@@ -127,7 +168,7 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
           <div className="cookie-box__heading">
             <h3 id="cookie-box-heading">Your cookie box</h3>
             <span aria-live="polite">
-              {totalBoxes} {totalBoxes === 1 ? 'box' : 'boxes'}
+              {totalBoxes} {totalBoxes === 1 ? "box" : "boxes"}
             </span>
           </div>
           {selectedProducts.length === 0 ? (
@@ -152,20 +193,20 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
           ) : (
             <div className="cookie-box__items" aria-live="polite">
               {selectedProducts.map((product) => {
-                const quantity = boxQuantities[product.id] ?? 0
+                const quantity = boxQuantities[product.id] ?? 0;
 
                 return (
                   <div className="cookie-box__item" key={product.id}>
                     <div>
                       <strong>{product.name}</strong>
                       <small>
-                        {quantity} {quantity === 1 ? 'box' : 'boxes'} ×{' '}
+                        {quantity} {quantity === 1 ? "box" : "boxes"} ×{" "}
                         {formatPrice(product.price)} per box
                       </small>
                     </div>
                     <strong>{formatPrice(product.price * quantity)}</strong>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -174,8 +215,160 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
             <strong>{formatPrice(boxTotal)}</strong>
           </div>
           <p className="cookie-box__note">All products are sold by the box.</p>
+          <button
+            className="cookie-box__checkout"
+            type="button"
+            disabled={totalBoxes === 0}
+            onClick={() => {
+              setDetailsChecked(false);
+              setOrderConfirmed(false);
+              setShowCheckout(true);
+            }}
+          >
+            Checkout <span aria-hidden="true">→</span>
+          </button>
         </aside>
       </div>
+      <dialog
+        ref={checkoutDialogRef}
+        className="checkout-preview"
+        aria-labelledby="checkout-heading"
+        onClose={() => setShowCheckout(false)}
+      >
+        <h2 id="checkout-heading">Review your order</h2>
+        <p>
+          You selected {totalBoxes} {totalBoxes === 1 ? "box" : "boxes"}.
+        </p>
+        <p>
+          Your total is <strong>{formatPrice(boxTotal)}</strong>.
+        </p>
+        <div hidden={detailsChecked}>
+          <h3>Your details</h3>
+          <form
+            className="checkout-form"
+            onSubmit={handleCheckoutSubmit}
+            onChange={() => setDetailsChecked(false)}
+          >
+            <div className="checkout-fields">
+              <label htmlFor="checkout-name">Your name</label>
+              <input
+                id="checkout-name"
+                type="text"
+                required
+                autoComplete="name"
+                placeholder="Name for the order"
+                name="name"
+                value={customerDetails.name}
+                onChange={handleCustomerDetailsChange}
+              />
+
+              <label htmlFor="checkout-phone">Phone number</label>
+              <input
+                id="checkout-phone"
+                type="tel"
+                required
+                autoComplete="tel"
+                placeholder="Your contact number"
+                name="phone"
+                value={customerDetails.phone}
+                onChange={handleCustomerDetailsChange}
+              />
+
+              <label htmlFor="fulfillment-method">Pickup or delivery</label>
+              <select
+                id="fulfillment-method"
+                required
+                value={fulfillment}
+                onChange={(event) => setFulfillment(event.target.value)}
+              >
+                <option value="">Choose one</option>
+                <option value="pickup">Pickup</option>
+                <option value="delivery">Delivery</option>
+              </select>
+
+              {fulfillment === "delivery" && (
+                <>
+                  <label htmlFor="delivery-address">Delivery address</label>
+                  <textarea
+                    id="delivery-address"
+                    rows="3"
+                    required
+                    placeholder="Where should we deliver your box?"
+                    name="address"
+                    value={customerDetails.address}
+                    onChange={handleCustomerDetailsChange}
+                  />
+                </>
+              )}
+            </div>
+            <p>
+              Payment method: <strong>GCash</strong>. Payment is not connected
+              yet.
+            </p>
+            <button type="submit">Continue to payment →</button>
+          </form>
+        </div>
+
+        {detailsChecked && (
+          <section
+            className="payment-preview"
+            aria-labelledby="payment-heading"
+          >
+            {orderConfirmed ? (
+              <>
+                <h3 id="payment-heading">Demo order complete</h3>
+                <p>
+                  <strong>Name:</strong> {customerDetails.name}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {customerDetails.phone}
+                </p>
+                <p>
+                  <strong>Handoff:</strong>{" "}
+                  {fulfillment === "pickup" ? "Pickup" : "Delivery"}
+                </p>
+                {fulfillment === "delivery" && (
+                  <p>
+                    <strong>Delivery address:</strong> {customerDetails.address}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCheckout(false);
+                    setDetailsChecked(false);
+                    setOrderConfirmed(false);
+                  }}
+                >
+                  Back to cookies
+                </button>
+              </>
+            ) : (
+              <>
+                <h3 id="payment-heading">GCash payment (demo)</h3>
+                <p>
+                  Amount due: <strong>{formatPrice(boxTotal)}</strong>
+                </p>
+                <p>
+                  This demo does not take payment. Secure GCash instructions
+                  will go here when payment is connected.
+                </p>
+                <button type="button" onClick={() => setDetailsChecked(false)}>
+                  Back to details
+                </button>
+                <button type="button" onClick={() => setOrderConfirmed(true)}>
+                  Finish demo order
+                </button>
+              </>
+            )}
+          </section>
+        )}
+        {!orderConfirmed && (
+          <button type="button" onClick={() => setShowCheckout(false)}>
+            Back to cookies
+          </button>
+        )}
+      </dialog>
     </section>
-  )
+  );
 }
