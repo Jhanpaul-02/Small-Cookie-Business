@@ -1,0 +1,33 @@
+.admin-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 24px;
+}
+
+.admin-summary__card {
+  padding: 18px;
+  border: 1px solid #e8ded2;
+  border-radius: 12px;
+  background: #fffdf9;
+}
+
+.admin-summary__card h2 {
+  margin: 0 0 8px;
+  color: #806f64;
+  font-size: 0.8rem;
+}
+
+.admin-summary__card p {
+  margin: 0;
+  color: #3a2821;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .admin-summary {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,94 @@
+.admin-products {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #e8ded2;
+  border-radius: 12px;
+  background: #fffdf9;
+}
+
+.admin-products h2 {
+  margin-top: 0;
+  color: #3a2821;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.admin-products__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.6fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-products__field {
+  display: grid;
+  gap: 6px;
+  color: #806f64;
+  font-size: 0.8rem;
+}
+
+.admin-products__field input {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #e8ded2;
+  border-radius: 7px;
+  color: #3a2821;
+  background: #fffdf9;
+}
+
+.admin-products__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #963b4b;
+}
+
+.admin-products__add-button,
+.admin-products__remove-button {
+  padding: 9px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.admin-products__add-button {
+  border: 1px solid #963b4b;
+  color: #fffdf9;
+  background: #963b4b;
+}
+
+.admin-products__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.admin-products__card {
+  padding: 14px;
+  border: 1px solid #e8ded2;
+  border-radius: 9px;
+  background: #fbf8f2;
+}
+
+.admin-products__card h3 {
+  margin-top: 0;
+  color: #3a2821;
+}
+
+.admin-products__card p {
+  color: #806f64;
+}
+
+.admin-products__remove-button {
+  border: 1px solid #e8ded2;
+  color: #963b4b;
+  background: transparent;
+}
+
+@media (max-width: 600px) {
+  .admin-products__form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-products__error {
+    grid-column: auto;
+  }
+}

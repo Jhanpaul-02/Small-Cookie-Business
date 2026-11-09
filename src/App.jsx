@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Admin from './page/Admin'
 import NavBar from './components/NavBar'
 import Homepage from './components/Homepage'
 import Footer from './components/Footer'
@@ -19,17 +21,27 @@ function App() {
     }))
   }
 
-  return (
-    <>
-      <NavBar boxCount={boxCount} />
-      <Homepage />
-      <ShopPage
-        boxQuantities={boxQuantities}
-        onQuantityChange={handleQuantityChange}
-      />
-      <HowToOrder />
-      <Footer />
-    </>
+    return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <>
+              <NavBar boxCount={boxCount} />
+              <Homepage />
+              <ShopPage
+                boxQuantities={boxQuantities}
+                onQuantityChange={handleQuantityChange}
+              />
+              <HowToOrder />
+              <Footer />
+            </>
+          }
+        />
+        <Route path="/admin" element={<Admin />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
