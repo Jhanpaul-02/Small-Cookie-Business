@@ -1,0 +1,48 @@
+.admin-order-snapshot {
+  margin-block: 24px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: #f0e5cd;
+}
+
+.admin-order-snapshot > h2 {
+  margin: 0 0 12px;
+  color: #3a2821;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+}
+
+.admin-order-snapshot__counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-order-snapshot__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.65);
+}
+
+.admin-order-snapshot__card h3 {
+  margin: 0;
+  color: #806f64;
+  font-size: 0.8rem;
+}
+
+.admin-order-snapshot__card p {
+  margin: 0;
+  color: #963b4b;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .admin-order-snapshot__counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

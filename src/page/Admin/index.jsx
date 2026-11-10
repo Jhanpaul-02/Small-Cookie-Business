@@ -2,6 +2,9 @@ import AdminNavbar from "../../components/Admin Navbar";
 import AdminSummary from "../../components/Admin Summary";
 import AdminOrders from "../../components/Admin Orders";
 import AdminProducts from "../../components/Admin Products";
+import AdminOrderSnapshot from "../../components/Admin Order Snapshot";
+import AdminRevenueChart from "../../components/Admin Revenue Chart";
+import AdminPopularProducts from "../../components/Admin Popular Products";
 import "./styles.css";
 import { useState } from "react";
 
@@ -61,6 +64,11 @@ export default function Admin() {
         <p>Dashboard overview — sample values only</p>
 
         <AdminSummary stats={sampleStats} />
+        <AdminOrderSnapshot orders={orders} />
+        <div className="admin-analytics">
+          <AdminRevenueChart />
+          <AdminPopularProducts />
+        </div>
         <AdminOrders orders={orders} onStatusChange={handleOrderStatusChange} />
         <AdminProducts
           products={products}
