@@ -1,0 +1,63 @@
+.admin-revenue-chart {
+  margin-block: 24px;
+  padding: 20px;
+  border: 1px solid #e8ded2;
+  border-radius: 12px;
+  background: #fffdf9;
+}
+
+.admin-revenue-chart h2 {
+  margin: 0 0 8px;
+  color: #3a2821;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.admin-revenue-chart > p {
+  margin: 0 0 16px;
+  color: #806f64;
+  font-size: 0.8rem;
+}
+
+.admin-revenue-chart__bars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+  height: 220px;
+  border-bottom: 1px solid #e8ded2;
+}
+
+.admin-revenue-chart__day {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  color: #806f64;
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.admin-revenue-chart__track {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.admin-revenue-chart__bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background: #963b4b;
+}
+
+@media (max-width: 500px) {
+  .admin-revenue-chart {
+    padding: 16px;
+  }
+
+  .admin-revenue-chart__bars {
+    gap: 6px;
+  }
+
+  .admin-revenue-chart__day {
+    font-size: 0.62rem;
+  }
+}
