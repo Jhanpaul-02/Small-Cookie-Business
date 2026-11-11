@@ -2,30 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import cookiesPhoto from "../../assets/cookies-hero.jpg";
 import "./styles.css";
 
-const products = [
-  {
-    id: "cookies",
-    name: "Cookies",
-    description: "A box of freshly baked cookies, ready to share.",
-    price: 200,
-    style: "cookies",
-  },
-  {
-    id: "crinkles",
-    name: "Crinkles",
-    description: "A box of soft, chocolatey crinkles.",
-    price: 200,
-    style: "crinkles",
-  },
-  {
-    id: "smores",
-    name: "S'mores Cookies",
-    description: "A sweet cookie box inspired by the campfire favorite.",
-    price: 270,
-    style: "smores",
-  },
-];
-
 function formatPrice(amount) {
   return `₱${amount.toLocaleString("en-PH")}`;
 }
@@ -40,6 +16,9 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
     phone: "",
     address: "",
   });
+  const [products, setProducts] = useState([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [productLoadError, setProductLoadError] = useState("");
 
   const selectedProducts = products.filter(
     (product) => (boxQuantities[product.id] ?? 0) > 0,
@@ -67,6 +46,43 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
       dialog.close();
     }
   }, [showCheckout]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products", {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProducts(
+          data.map((product) => ({
+            ...product,
+            price: Number(product.price),
+          })),
+        );
+      } catch (error) {
+        if (error.name === "AbortError") return;
+
+        console.error("Could not load products:", error);
+        setProductLoadError("We couldn't load the cookies. Please try again.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsProductsLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+
+    return () => controller.abort();
+  }, []);
 
   function handleCustomerDetailsChange(event) {
     const { name, value } = event.target;
@@ -116,52 +132,60 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
 
       <div className="shop-page__content">
         <div className="shop-products" aria-label="Cookie boxes">
-          {products.map((product) => {
-            const quantity = boxQuantities[product.id] ?? 0;
+          {isProductsLoading ? (
+            <p role="status">Loading products...</p>
+          ) : productLoadError ? (
+            <p role="alert">{productLoadError}</p>
+          ) : products.length === 0 ? (
+            <p>No products are available right now.</p>
+          ) : (
+            products.map((product) => {
+              const quantity = boxQuantities[product.id] ?? 0;
 
-            return (
-              <article className="shop-product" key={product.id}>
-                <div
-                  className={`shop-product__visual shop-product__visual--${product.style}`}
-                >
-                  <img src={cookiesPhoto} alt="" />
-                  <span>SMALL BATCH</span>
-                </div>
-                <div className="shop-product__details">
-                  <h3>{product.name}</h3>
-                  <p>{product.description}</p>
-                  <div className="shop-product__purchase">
-                    <div className="shop-product__price">
-                      <strong>{formatPrice(product.price)}</strong>
-                      <span>per box</span>
-                    </div>
-                    <div
-                      className="shop-product__quantity"
-                      role="group"
-                      aria-label={`${product.name} box quantity`}
-                    >
-                      <button
-                        type="button"
-                        aria-label={`Remove one box of ${product.name}`}
-                        onClick={() => onQuantityChange(product.id, -1)}
-                        disabled={quantity === 0}
+              return (
+                <article className="shop-product" key={product.id}>
+                  <div
+                    className={`shop-product__visual shop-product__visual--${product.style}`}
+                  >
+                    <img src={cookiesPhoto} alt="" />
+                    <span>SMALL BATCH</span>
+                  </div>
+                  <div className="shop-product__details">
+                    <h3>{product.name}</h3>
+                    <p>{product.description}</p>
+                    <div className="shop-product__purchase">
+                      <div className="shop-product__price">
+                        <strong>{formatPrice(product.price)}</strong>
+                        <span>per box</span>
+                      </div>
+                      <div
+                        className="shop-product__quantity"
+                        role="group"
+                        aria-label={`${product.name} box quantity`}
                       >
-                        −
-                      </button>
-                      <span aria-live="polite">{quantity}</span>
-                      <button
-                        type="button"
-                        aria-label={`Add one box of ${product.name}`}
-                        onClick={() => onQuantityChange(product.id, 1)}
-                      >
-                        +
-                      </button>
+                        <button
+                          type="button"
+                          aria-label={`Remove one box of ${product.name}`}
+                          onClick={() => onQuantityChange(product.id, -1)}
+                          disabled={quantity === 0}
+                        >
+                          −
+                        </button>
+                        <span aria-live="polite">{quantity}</span>
+                        <button
+                          type="button"
+                          aria-label={`Add one box of ${product.name}`}
+                          onClick={() => onQuantityChange(product.id, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            );
-          })}
+                </article>
+              );
+            })
+          )}
         </div>
 
         <aside className="cookie-box" aria-labelledby="cookie-box-heading">

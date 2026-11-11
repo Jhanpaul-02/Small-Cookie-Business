@@ -6,14 +6,12 @@ import AdminOrderSnapshot from "../../components/Admin Order Snapshot";
 import AdminRevenueChart from "../../components/Admin Revenue Chart";
 import AdminPopularProducts from "../../components/Admin Popular Products";
 import "./styles.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Admin() {
-  const [products, setProducts] = useState([
-    { id: "cookies", name: "Cookies", price: 200 },
-    { id: "crinkles", name: "Crinkles", price: 200 },
-    { id: "smores", name: "S'mores Cookies", price: 270 },
-  ]);
+  const [products, setProducts] = useState([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
 
   const sampleStats = [
     { label: "Sales today", value: "₱0" },
@@ -56,6 +54,42 @@ export default function Admin() {
     setProducts((currentProducts) => [...currentProducts, newProduct]);
   }
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadProducts() {
+      try {
+        const response = await fetch("/api/products", {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProducts(
+          data.map((product) => ({
+            ...product,
+            price: Number(product.price),
+          })),
+        );
+      } catch (error) {
+        if (error.name === "AbortError") return;
+
+        console.error("Could not load admin products:", error);
+        setProductsError("Could not load products from the server.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsProductsLoading(false);
+        }
+      }
+    }
+
+    loadProducts();
+    return () => controller.abort();
+  }, []);
+
   return (
     <div className="admin-layout">
       <AdminNavbar />
@@ -70,11 +104,17 @@ export default function Admin() {
           <AdminPopularProducts />
         </div>
         <AdminOrders orders={orders} onStatusChange={handleOrderStatusChange} />
-        <AdminProducts
-          products={products}
-          onAdd={handleAddProduct}
-          onRemove={handleRemoveProduct}
-        />
+        {isProductsLoading ? (
+          <p role="status">Loading products...</p>
+        ) : productsError ? (
+          <p role="alert">{productsError}</p>
+        ) : (
+          <AdminProducts
+            products={products}
+            onAdd={handleAddProduct}
+            onRemove={handleRemoveProduct}
+          />
+        )}
 
         <p>These are demo values. Real orders and sales aren't saved yet.</p>
       </main>

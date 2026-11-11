@@ -21,6 +21,22 @@ app.get("/api/db-health", async (req, res) => {
   }
 });
 
+app.get("/api/products", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, description, price, style
+       FROM public.products
+       WHERE is_active = TRUE
+       ORDER BY created_at ASC`,
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Products fetch failed:", error.message);
+    res.status(500).json({ message: "Could not load products." });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`API server listening at http://localhost:${PORT}`);
 });
