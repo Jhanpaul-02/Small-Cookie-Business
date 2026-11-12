@@ -7,6 +7,7 @@ import AdminRevenueChart from "../../components/Admin Revenue Chart";
 import AdminPopularProducts from "../../components/Admin Popular Products";
 import "./styles.css";
 import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function Admin() {
   const [products, setProducts] = useState([]);
@@ -50,8 +51,34 @@ export default function Admin() {
     );
   }
 
-  function handleAddProduct(newProduct) {
-    setProducts((currentProducts) => [...currentProducts, newProduct]);
+    async function handleAddProduct(newProduct) {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error("Please sign in again.");
+
+    const response = await fetch("/api/products", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(newProduct),
+    });
+
+    const savedProduct = await response.json();
+
+    if (!response.ok) {
+      throw new Error(savedProduct.message || "Could not save product.");
+    }
+
+    setProducts((currentProducts) => [
+      ...currentProducts,
+      { ...savedProduct, price: Number(savedProduct.price) },
+    ]);
   }
 
   useEffect(() => {

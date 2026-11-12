@@ -5,8 +5,9 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
   const [newProductName, setNewProductName] = useState("");
   const [newProductPrice, setNewProductPrice] = useState("");
   const [productError, setProductError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const name = newProductName.trim();
@@ -17,10 +18,19 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
       return;
     }
 
-    onAdd({ id: crypto.randomUUID(), name, price });
-    setNewProductName("");
-    setNewProductPrice("");
     setProductError("");
+    setIsSaving(true);
+
+    try {
+      await onAdd({ name, price });
+      setNewProductName("");
+      setNewProductPrice("");
+    } catch (error) {
+      console.error("Could not add product:", error);
+      setProductError("Could not save product. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -50,8 +60,18 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
           />
         </label>
 
-        {productError && <p role="alert" className="admin-products__error">{productError}</p>}
-        <button type="submit" className="admin-products__add-button">Add product</button>
+        {productError && (
+          <p role="alert" className="admin-products__error">
+            {productError}
+          </p>
+        )}
+        <button
+          type="submit"
+          className="admin-products__add-button"
+          disabled={isSaving}
+        >
+          {isSaving ? "Saving..." : "Add product"}
+        </button>
       </form>
 
       <div className="admin-products__grid">

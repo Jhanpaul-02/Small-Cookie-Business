@@ -10,40 +10,57 @@ export default function RequireAdmin({ children }) {
   useEffect(() => {
     let isMounted = true;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (isMounted) {
-        setSession(currentSession);
-        setIsChecking(false);
-      }
-    });
+    async function verifyAdmin() {
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (!isMounted) return;
+        if (error) throw error;
 
-        if (error) {
-          console.error("Could not check admin session:", error);
-          setErrorMessage("Could not verify your sign-in. Please try again.");
-        } else {
-          setSession(data.session);
+        if (!session) {
+          if (isMounted) setSession(null);
+          return;
         }
 
-        setIsChecking(false);
-      })
-      .catch((error) => {
-        if (!isMounted) return;
+        const response = await fetch("/api/admin/check", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
 
-        console.error("Could not check admin session:", error);
-        setErrorMessage("Could not verify your sign-in. Please try again.");
-        setIsChecking(false);
-      });
+        if (response.status === 401) {
+          if (isMounted) setSession(null);
+          return;
+        }
+
+        if (response.status === 403) {
+          if (isMounted) {
+            setErrorMessage("This account is not approved for admin access.");
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error(`Admin check failed with status ${response.status}`);
+        }
+
+        if (isMounted) setSession(session);
+      } catch (error) {
+        console.error("Could not verify admin access:", error);
+        if (isMounted) {
+          setErrorMessage("Could not verify admin access. Please try again.");
+        }
+      } finally {
+        if (isMounted) setIsChecking(false);
+      }
+    }
+
+    verifyAdmin();
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
