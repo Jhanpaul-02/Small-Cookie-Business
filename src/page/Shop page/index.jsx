@@ -19,6 +19,9 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
   const [products, setProducts] = useState([]);
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [productLoadError, setProductLoadError] = useState("");
+  const [savedOrder, setSavedOrder] = useState(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [orderSaveError, setOrderSaveError] = useState("");
 
   const selectedProducts = products.filter(
     (product) => (boxQuantities[product.id] ?? 0) > 0,
@@ -96,6 +99,50 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
     event.preventDefault();
     setDetailsChecked(true);
   }
+
+  async function handleFinishOrder() {
+    setOrderSaveError("");
+    setIsSavingOrder(true);
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: customerDetails.name,
+          customerPhone: customerDetails.phone,
+          fulfillment,
+          deliveryAddress:
+            fulfillment === "delivery" ? customerDetails.address : null,
+          items: selectedProducts.map((product) => ({
+            productId: product.id,
+            quantity: boxQuantities[product.id],
+          })),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Could not save the order.");
+      }
+
+      setSavedOrder({ ...result, totalBoxes });
+      setOrderConfirmed(true);
+
+      selectedProducts.forEach((product) => {
+        onQuantityChange(product.id, -(boxQuantities[product.id] ?? 0));
+      });
+    } catch (error) {
+      console.error("Could not save order:", error);
+      setOrderSaveError("Could not save your order. Please try again.");
+    } finally {
+      setIsSavingOrder(false);
+    }
+  }
+
+  const displayedTotalBoxes = savedOrder?.totalBoxes ?? totalBoxes;
+  const displayedTotal = savedOrder ? Number(savedOrder.total) : boxTotal;
   return (
     <section className="shop-page" id="cookies" aria-labelledby="shop-heading">
       <div className="shop-page__inner">
@@ -246,6 +293,8 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
             onClick={() => {
               setDetailsChecked(false);
               setOrderConfirmed(false);
+              setSavedOrder(null);
+              setOrderSaveError("");
               setShowCheckout(true);
             }}
           >
@@ -261,10 +310,11 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
       >
         <h2 id="checkout-heading">Review your order</h2>
         <p>
-          You selected {totalBoxes} {totalBoxes === 1 ? "box" : "boxes"}.
+          You selected {displayedTotalBoxes}{" "}
+          {displayedTotalBoxes === 1 ? "box" : "boxes"}.
         </p>
         <p>
-          Your total is <strong>{formatPrice(boxTotal)}</strong>.
+          Your total is <strong>{formatPrice(displayedTotal)}</strong>.
         </p>
         <div hidden={detailsChecked}>
           <h3>Your details</h3>
@@ -340,7 +390,11 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
           >
             {orderConfirmed ? (
               <>
-                <h3 id="payment-heading">Demo order complete</h3>
+                <h3 id="payment-heading">Order received</h3>
+                <p>
+                  <strong>Order reference:</strong> {savedOrder?.id}
+                </p>
+                <p>Payment is still unpaid. No payment was taken.</p>
                 <p>
                   <strong>Name:</strong> {customerDetails.name}
                 </p>
@@ -370,8 +424,9 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
             ) : (
               <>
                 <h3 id="payment-heading">GCash payment (demo)</h3>
+                {orderSaveError && <p role="alert">{orderSaveError}</p>}
                 <p>
-                  Amount due: <strong>{formatPrice(boxTotal)}</strong>
+                  Amount due: <strong>{formatPrice(displayedTotal)}</strong>
                 </p>
                 <p>
                   This demo does not take payment. Secure GCash instructions
@@ -380,8 +435,12 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
                 <button type="button" onClick={() => setDetailsChecked(false)}>
                   Back to details
                 </button>
-                <button type="button" onClick={() => setOrderConfirmed(true)}>
-                  Finish demo order
+                <button
+                  type="button"
+                  onClick={handleFinishOrder}
+                  disabled={isSavingOrder}
+                >
+                  {isSavingOrder ? "Saving order..." : "Place demo order"}
                 </button>
               </>
             )}
