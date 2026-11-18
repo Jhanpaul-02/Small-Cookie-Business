@@ -6,6 +6,7 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
   const [newProductPrice, setNewProductPrice] = useState("");
   const [productError, setProductError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [removingProductId, setRemovingProductId] = useState(null);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -30,6 +31,19 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
       setProductError("Could not save product. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  }
+  async function handleRemoveClick(productId) {
+    setProductError("");
+    setRemovingProductId(productId);
+
+    try {
+      await onRemove(productId);
+    } catch (error) {
+      console.error("Could not remove product:", error);
+      setProductError("Could not remove product. Please try again.");
+    } finally {
+      setRemovingProductId(null);
     }
   }
 
@@ -82,10 +96,11 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
             <button
               type="button"
               className="admin-products__remove-button"
-              onClick={() => onRemove(product.id)}
+              onClick={() => handleRemoveClick(product.id)}
+              disabled={removingProductId !== null}
               aria-label={`Remove ${product.name}`}
             >
-              Remove
+              {removingProductId === product.id ? "Removing..." : "Remove"}
             </button>
           </article>
         ))}

@@ -37,7 +37,27 @@ export default function Admin() {
     },
   ]);
 
-  function handleRemoveProduct(productId) {
+   async function handleRemoveProduct(productId) {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error("Please sign in again.");
+
+    const response = await fetch(`/api/products/${productId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.message || "Could not remove product.");
+    }
+
     setProducts((currentProducts) =>
       currentProducts.filter((product) => product.id !== productId),
     );
