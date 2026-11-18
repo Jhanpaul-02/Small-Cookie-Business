@@ -32,7 +32,7 @@ export default function AdminOrders({ orders, onStatusChange }) {
       </div>
       <div className="admin-orders__table-wrap">
         <table className="admin-orders__table">
-          <caption>Demo data only—not real orders</caption>
+          <caption>Customer orders saved in the system.</caption>
           <thead>
             <tr>
               <th scope="col">Order</th>
