@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import { pool } from "./db.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 
@@ -6,8 +6,8 @@ const app = express();
 app.use(express.json());
 const PORT = process.env.PORT || 3000;
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Khaleb’s Cookies API is running.' });
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "Khaleb’s Cookies API is running." });
 });
 
 app.get("/api/db-health", async (req, res) => {
@@ -40,8 +40,7 @@ app.get("/api/products", async (req, res) => {
 });
 
 app.post("/api/products", requireAdmin, async (req, res) => {
-  const name =
-    typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
   const price = Number(req.body?.price);
 
   if (!name || !Number.isFinite(price) || price <= 0) {
@@ -122,8 +121,7 @@ app.post("/api/orders", async (req, res) => {
   }
 
   const items = rawItems.map((item) => ({
-    productId:
-      typeof item?.productId === "string" ? item.productId : "",
+    productId: typeof item?.productId === "string" ? item.productId : "",
     quantity: item?.quantity,
   }));
 
@@ -219,6 +217,79 @@ app.post("/api/orders", async (req, res) => {
     return res.status(500).json({ message: "Could not save the order." });
   } finally {
     if (client) client.release();
+  }
+});
+
+app.get("/api/orders", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         o.id,
+         o.customer_name AS customer,
+         o.customer_phone AS "customerPhone",
+         o.fulfillment,
+         o.delivery_address AS "deliveryAddress",
+         o.total,
+         o.status,
+         o.payment_status AS "paymentStatus",
+         o.created_at AS "createdAt",
+         COALESCE(SUM(oi.quantity), 0)::integer AS boxes,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'productName', oi.product_name,
+               'quantity', oi.quantity,
+               'unitPrice', oi.unit_price,
+               'lineTotal', oi.line_total
+             )
+           ) FILTER (WHERE oi.order_id IS NOT NULL),
+           '[]'::json
+         ) AS items
+       FROM public.orders o
+       LEFT JOIN public.order_items oi ON oi.order_id = o.id
+       GROUP BY o.id
+       ORDER BY o.created_at DESC`,
+    );
+
+    return res.json(result.rows);
+  } catch (error) {
+    console.error("Orders fetch failed:", error.message);
+    return res.status(500).json({ message: "Could not load orders." });
+  }
+});
+
+app.patch("/api/orders/:id/status", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body ?? {};
+  const allowedStatuses = ["Pending", "Baking", "Ready", "Completed"];
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  ) {
+    return res.status(400).json({ message: "Invalid order ID." });
+  }
+
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({ message: "Invalid order status." });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE public.orders
+       SET status = $2
+       WHERE id = $1
+       RETURNING id, status`,
+      [id, status],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Order status update failed:", error.message);
+    return res.status(500).json({ message: "Could not update order status." });
   }
 });
 

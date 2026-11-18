@@ -20,24 +20,13 @@ export default function Admin() {
     { label: "Products", value: products.length },
   ];
 
-  const [orders, setOrders] = useState([
-    {
-      id: "DEMO-001",
-      customer: "Demo Customer",
-      boxes: 2,
-      total: "₱400",
-      status: "Pending",
-    },
-    {
-      id: "DEMO-002",
-      customer: "Demo Customer",
-      boxes: 1,
-      total: "₱270",
-      status: "Completed",
-    },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState("");
+  const [orderStatusError, setOrderStatusError] = useState("");
+  const [isUpdatingOrderStatus, setIsUpdatingOrderStatus] = useState(false);
 
-   async function handleRemoveProduct(productId) {
+  async function handleRemoveProduct(productId) {
     const {
       data: { session },
       error: sessionError,
@@ -63,15 +52,48 @@ export default function Admin() {
     );
   }
 
-  function handleOrderStatusChange(orderId, newStatus) {
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order,
-      ),
-    );
+  async function handleOrderStatusChange(orderId, newStatus) {
+    setOrderStatusError("");
+    setIsUpdatingOrderStatus(true);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error("Please sign in again.");
+
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Could not update order status.");
+      }
+
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === result.id ? { ...order, status: result.status } : order,
+        ),
+      );
+    } catch (error) {
+      console.error("Could not update order status:", error);
+      setOrderStatusError("Could not save the order status. Please try again.");
+    } finally {
+      setIsUpdatingOrderStatus(false);
+    }
   }
 
-    async function handleAddProduct(newProduct) {
+  async function handleAddProduct(newProduct) {
     const {
       data: { session },
       error: sessionError,
@@ -137,20 +159,80 @@ export default function Admin() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadOrders() {
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+        if (!session) throw new Error("Please sign in again.");
+
+        const response = await fetch("/api/orders", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        setOrders(
+          data.map((order) => ({
+            ...order,
+            total: `₱${Number(order.total).toLocaleString("en-PH")}`,
+          })),
+        );
+      } catch (error) {
+        if (error.name === "AbortError") return;
+
+        console.error("Could not load admin orders:", error);
+        setOrdersError("Could not load orders from the server.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsOrdersLoading(false);
+        }
+      }
+    }
+
+    loadOrders();
+
+    return () => controller.abort();
+  }, []);
   return (
     <div className="admin-layout">
       <AdminNavbar />
       <main className="admin-content">
         <h1>Khaleb's Cookies Admin</h1>
-        <p>Dashboard overview — sample values only</p>
 
         <AdminSummary stats={sampleStats} />
-        <AdminOrderSnapshot orders={orders} />
+        {isOrdersLoading ? (
+          <p role="status">Loading orders...</p>
+        ) : ordersError ? (
+          <p role="alert">{ordersError}</p>
+        ) : (
+          <AdminOrderSnapshot orders={orders} />
+        )}
         <div className="admin-analytics">
           <AdminRevenueChart />
           <AdminPopularProducts />
         </div>
-        <AdminOrders orders={orders} onStatusChange={handleOrderStatusChange} />
+        {!isOrdersLoading && !ordersError && (
+          <AdminOrders
+            orders={orders}
+            onStatusChange={handleOrderStatusChange}
+            statusError={orderStatusError}
+            isUpdating={isUpdatingOrderStatus}
+          />
+        )}
         {isProductsLoading ? (
           <p role="status">Loading products...</p>
         ) : productsError ? (
@@ -162,8 +244,10 @@ export default function Admin() {
             onRemove={handleRemoveProduct}
           />
         )}
-
-        <p>These are demo values. Real orders and sales aren't saved yet.</p>
+        <p>
+          Sales and analytics are still demo values. Order records are saved;
+          status changes are not saved yet.
+        </p>
       </main>
     </div>
   );
