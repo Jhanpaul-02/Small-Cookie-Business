@@ -10,21 +10,46 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 export default function Admin() {
+  const manilaDateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
   const [products, setProducts] = useState([]);
   const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
-
-  const sampleStats = [
-    { label: "Sales today", value: "₱0" },
-    { label: "Orders today", value: "0" },
-    { label: "Products", value: products.length },
-  ];
-
   const [orders, setOrders] = useState([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState("");
   const [orderStatusError, setOrderStatusError] = useState("");
   const [isUpdatingOrderStatus, setIsUpdatingOrderStatus] = useState(false);
+  const [paymentStatusError, setPaymentStatusError] = useState("");
+  const [isUpdatingPaymentStatus, setIsUpdatingPaymentStatus] = useState(false);
+
+  const today = manilaDateFormatter.format(new Date());
+
+  const ordersToday = orders.filter(
+    (order) => manilaDateFormatter.format(new Date(order.createdAt)) === today,
+  );
+
+  const paidOrdersToday = ordersToday.filter(
+    (order) => order.paymentStatus === "paid",
+  );
+
+  const salesToday = paidOrdersToday.reduce(
+    (sum, order) => sum + order.totalAmount,
+    0,
+  );
+
+  const dashboardStats = [
+    {
+      label: "Sales today",
+      value: `₱${salesToday.toLocaleString("en-PH")}`,
+    },
+    { label: "Orders today", value: ordersToday.length },
+    { label: "Products", value: products.length },
+  ];
 
   async function handleRemoveProduct(productId) {
     const {
@@ -90,6 +115,49 @@ export default function Admin() {
       setOrderStatusError("Could not save the order status. Please try again.");
     } finally {
       setIsUpdatingOrderStatus(false);
+    }
+  }
+
+  async function handlePaymentStatusChange(orderId, newPaymentStatus) {
+    setPaymentStatusError("");
+    setIsUpdatingPaymentStatus(true);
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error("Please sign in again.");
+
+      const response = await fetch(`/api/orders/${orderId}/payment-status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ paymentStatus: newPaymentStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Could not update payment status.");
+      }
+
+      setOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === result.id
+            ? { ...order, paymentStatus: result.paymentStatus }
+            : order,
+        ),
+      );
+    } catch (error) {
+      console.error("Could not update payment status:", error);
+      setPaymentStatusError("Could not save payment status. Please try again.");
+    } finally {
+      setIsUpdatingPaymentStatus(false);
     }
   }
 
@@ -188,6 +256,7 @@ export default function Admin() {
         setOrders(
           data.map((order) => ({
             ...order,
+            totalAmount: Number(order.total),
             total: `₱${Number(order.total).toLocaleString("en-PH")}`,
           })),
         );
@@ -213,7 +282,7 @@ export default function Admin() {
       <main className="admin-content">
         <h1>Khaleb's Cookies Admin</h1>
 
-        <AdminSummary stats={sampleStats} />
+        <AdminSummary stats={dashboardStats} />
         {isOrdersLoading ? (
           <p role="status">Loading orders...</p>
         ) : ordersError ? (
@@ -231,6 +300,9 @@ export default function Admin() {
             onStatusChange={handleOrderStatusChange}
             statusError={orderStatusError}
             isUpdating={isUpdatingOrderStatus}
+            onPaymentStatusChange={handlePaymentStatusChange}
+            paymentStatusError={paymentStatusError}
+            isUpdatingPaymentStatus={isUpdatingPaymentStatus}
           />
         )}
         {isProductsLoading ? (
@@ -245,8 +317,8 @@ export default function Admin() {
           />
         )}
         <p>
-          Sales and analytics are still demo values. Order records are saved;
-          status changes are not saved yet.
+          Revenue and popular-product analytics are demo values. Sales counts
+          paid orders; Orders today counts all orders.
         </p>
       </main>
     </div>

@@ -293,6 +293,41 @@ app.patch("/api/orders/:id/status", requireAdmin, async (req, res) => {
   }
 });
 
+app.patch("/api/orders/:id/payment-status", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { paymentStatus } = req.body ?? {};
+  const allowedPaymentStatuses = ["unpaid", "paid"];
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  ) {
+    return res.status(400).json({ message: "Invalid order ID." });
+  }
+
+  if (!allowedPaymentStatuses.includes(paymentStatus)) {
+    return res.status(400).json({ message: "Invalid payment status." });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE public.orders
+       SET payment_status = $2
+       WHERE id = $1
+       RETURNING id, payment_status AS "paymentStatus"`,
+      [id, paymentStatus],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Payment status update failed:", error.message);
+    return res.status(500).json({ message: "Could not update payment status." });
+  }
+});
+
 app.get("/api/admin/check", requireAdmin, (req, res) => {
   res.json({ status: "ok", message: "Admin authorization verified." });
 });
