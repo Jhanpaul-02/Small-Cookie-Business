@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../../lib/supabase";
 import "./styles.css";
 
 export default function AdminProducts({ products, onAdd, onRemove }) {
@@ -7,10 +8,11 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
   const [productError, setProductError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [removingProductId, setRemovingProductId] = useState(null);
+  const [newProductImage, setNewProductImage] = useState(null);
 
   async function handleSubmit(event) {
     event.preventDefault();
-
+    const form = event.currentTarget;
     const name = newProductName.trim();
     const price = Number(newProductPrice);
 
@@ -20,12 +22,24 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
     }
 
     setProductError("");
+    if (
+      !newProductImage ||
+      !["image/jpeg", "image/png", "image/webp"].includes(
+        newProductImage.type,
+      ) ||
+      newProductImage.size > 5 * 1024 * 1024
+    ) {
+      setProductError("Choose a JPEG, PNG, or WebP photo no larger than 5 MB.");
+      return;
+    }
     setIsSaving(true);
 
     try {
-      await onAdd({ name, price });
+      await onAdd({ name, price, imageFile: newProductImage });
       setNewProductName("");
       setNewProductPrice("");
+      setNewProductImage(null);
+      form.reset();
     } catch (error) {
       console.error("Could not add product:", error);
       setProductError("Could not save product. Please try again.");
@@ -73,7 +87,18 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
             required
           />
         </label>
-
+        <label className="admin-products__field" htmlFor="product-image">
+          Product photo
+          <input
+            id="product-image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            required
+            onChange={(event) =>
+              setNewProductImage(event.target.files?.[0] ?? null)
+            }
+          />
+        </label>
         {productError && (
           <p role="alert" className="admin-products__error">
             {productError}
@@ -89,21 +114,38 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
       </form>
 
       <div className="admin-products__grid">
-        {products.map((product) => (
-          <article key={product.id} className="admin-products__card">
-            <h3>{product.name}</h3>
-            <p>Price per box: ₱{product.price}</p>
-            <button
-              type="button"
-              className="admin-products__remove-button"
-              onClick={() => handleRemoveClick(product.id)}
-              disabled={removingProductId !== null}
-              aria-label={`Remove ${product.name}`}
-            >
-              {removingProductId === product.id ? "Removing..." : "Remove"}
-            </button>
-          </article>
-        ))}
+        {products.map((product) => {
+          const imageUrl = product.imagePath
+            ? supabase.storage
+                .from("product-images")
+                .getPublicUrl(product.imagePath).data.publicUrl
+            : null;
+
+          return (
+            <article key={product.id} className="admin-products__card">
+              {imageUrl ? (
+                <img
+                  className="admin-products__image"
+                  src={imageUrl}
+                  alt={product.name}
+                />
+              ) : (
+                <p>No photo uploaded yet.</p>
+              )}
+              <h3>{product.name}</h3>
+              <p>Price per box: ₱{product.price}</p>
+              <button
+                type="button"
+                className="admin-products__remove-button"
+                onClick={() => handleRemoveClick(product.id)}
+                disabled={removingProductId !== null}
+                aria-label={`Remove ${product.name}`}
+              >
+                {removingProductId === product.id ? "Removing..." : "Remove"}
+              </button>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
