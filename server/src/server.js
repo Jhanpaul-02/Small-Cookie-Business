@@ -26,7 +26,8 @@ app.get("/api/db-health", async (req, res) => {
 app.get("/api/products", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, description, price, style
+      `SELECT id, name, description, price, style,
+      image_path AS "imagePath"
        FROM public.products
        WHERE is_active = TRUE
        ORDER BY created_at ASC`,
@@ -42,19 +43,21 @@ app.get("/api/products", async (req, res) => {
 app.post("/api/products", requireAdmin, async (req, res) => {
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
   const price = Number(req.body?.price);
+  const imagePath =
+    typeof req.body?.imagePath === "string" ? req.body.imagePath.trim() : "";
 
-  if (!name || !Number.isFinite(price) || price <= 0) {
+  if (!name || !Number.isFinite(price) || price <= 0 || !imagePath) {
     return res.status(400).json({
-      message: "Enter a product name and a price greater than zero.",
+      message: "Enter a product name, a valid price, and a product photo.",
     });
   }
 
   try {
     const result = await pool.query(
-      `INSERT INTO public.products (name, price)
-       VALUES ($1, $2)
-       RETURNING id, name, description, price, style`,
-      [name, price],
+      `INSERT INTO public.products (name, price, image_path)
+        VALUES ($1, $2, $3)
+        RETURNING id, name, description, price, style, image_path AS "imagePath"`,
+      [name, price, imagePath],
     );
 
     return res.status(201).json(result.rows[0]);
@@ -324,7 +327,9 @@ app.patch("/api/orders/:id/payment-status", requireAdmin, async (req, res) => {
     return res.json(result.rows[0]);
   } catch (error) {
     console.error("Payment status update failed:", error.message);
-    return res.status(500).json({ message: "Could not update payment status." });
+    return res
+      .status(500)
+      .json({ message: "Could not update payment status." });
   }
 });
 

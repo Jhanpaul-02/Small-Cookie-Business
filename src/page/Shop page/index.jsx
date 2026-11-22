@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import cookiesPhoto from "../../assets/cookies-hero.jpg";
+import { supabase } from "../../lib/supabase";
 import "./styles.css";
 
 function formatPrice(amount) {
@@ -188,13 +189,25 @@ export default function ShopPage({ boxQuantities, onQuantityChange }) {
           ) : (
             products.map((product) => {
               const quantity = boxQuantities[product.id] ?? 0;
+              const productImageUrl = product.imagePath
+                ? supabase.storage
+                    .from("product-images")
+                    .getPublicUrl(product.imagePath).data.publicUrl
+                : cookiesPhoto;
 
               return (
                 <article className="shop-product" key={product.id}>
                   <div
-                    className={`shop-product__visual shop-product__visual--${product.style}`}
+                    className={
+                      product.imagePath
+                        ? "shop-product__visual"
+                        : `shop-product__visual shop-product__visual--${product.style}`
+                    }
                   >
-                    <img src={cookiesPhoto} alt="" />
+                    <img
+                      src={productImageUrl}
+                      alt={product.imagePath ? product.name : ""}
+                    />
                     <span>SMALL BATCH</span>
                   </div>
                   <div className="shop-product__details">
