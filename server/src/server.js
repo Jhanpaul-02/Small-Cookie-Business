@@ -96,6 +96,50 @@ app.delete("/api/products/:id", requireAdmin, async (req, res) => {
   }
 });
 
+app.patch("/api/products/:id/image", requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const imagePath =
+    typeof req.body?.imagePath === "string" ? req.body.imagePath.trim() : "";
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  if (!uuidPattern.test(id)) {
+    return res.status(400).json({ message: "Invalid product ID." });
+  }
+
+  const ownedImagePattern = new RegExp(
+    `^${req.user.id}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(jpg|png|webp)$`,
+    "i",
+  );
+
+  if (!ownedImagePattern.test(imagePath)) {
+    return res.status(400).json({ message: "Invalid product image path." });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE public.products
+       SET image_path = $2
+       WHERE id = $1 AND is_active = TRUE
+       RETURNING id, name, description, price, style,
+                 image_path AS "imagePath"`,
+      [id, imagePath],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Active product not found." });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Product image update failed:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Could not update the product image." });
+  }
+});
+
 app.post("/api/orders", async (req, res) => {
   const customerName =
     typeof req.body?.customerName === "string"

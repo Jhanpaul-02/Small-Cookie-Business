@@ -2,13 +2,20 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import "./styles.css";
 
-export default function AdminProducts({ products, onAdd, onRemove }) {
+export default function AdminProducts({
+  products,
+  onAdd,
+  onRemove,
+  onUpdateImage,
+}) {
   const [newProductName, setNewProductName] = useState("");
   const [newProductPrice, setNewProductPrice] = useState("");
   const [productError, setProductError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [removingProductId, setRemovingProductId] = useState(null);
   const [newProductImage, setNewProductImage] = useState(null);
+  const [imageError, setImageError] = useState("");
+  const [updatingImageProductId, setUpdatingImageProductId] = useState(null);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -47,6 +54,25 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
       setIsSaving(false);
     }
   }
+
+  async function handleImageChange(productId, event) {
+    const imageFile = event.target.files?.[0];
+    if (!imageFile) return;
+
+    setImageError("");
+    setUpdatingImageProductId(productId);
+
+    try {
+      await onUpdateImage(productId, imageFile);
+    } catch (error) {
+      console.error("Could not update product photo:", error);
+      setImageError("Could not update product photo. Please try again.");
+    } finally {
+      setUpdatingImageProductId(null);
+      event.target.value = "";
+    }
+  }
+
   async function handleRemoveClick(productId) {
     setProductError("");
     setRemovingProductId(productId);
@@ -112,7 +138,11 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
           {isSaving ? "Saving..." : "Add product"}
         </button>
       </form>
-
+      {imageError && (
+        <p role="alert" className="admin-products__error">
+          {imageError}
+        </p>
+      )}
       <div className="admin-products__grid">
         {products.map((product) => {
           const imageUrl = product.imagePath
@@ -132,6 +162,21 @@ export default function AdminProducts({ products, onAdd, onRemove }) {
               ) : (
                 <p>No photo uploaded yet.</p>
               )}
+              <label
+                className="admin-products__field"
+                htmlFor={`product-image-${product.id}`}
+              >
+                {updatingImageProductId === product.id
+                  ? "Uploading photo..."
+                  : "Change photo"}
+                <input
+                  id={`product-image-${product.id}`}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={updatingImageProductId !== null}
+                  onChange={(event) => handleImageChange(product.id, event)}
+                />
+              </label>
               <h3>{product.name}</h3>
               <p>Price per box: ₱{product.price}</p>
               <button

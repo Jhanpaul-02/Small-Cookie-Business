@@ -162,55 +162,109 @@ export default function Admin() {
   }
 
   async function handleAddProduct({ name, price, imageFile }) {
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-  if (sessionError) throw sessionError;
-  if (!session) throw new Error("Please sign in again.");
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error("Please sign in again.");
 
-  const extensions = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-  const extension = extensions[imageFile?.type];
+    const extensions = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+    const extension = extensions[imageFile?.type];
 
-  if (!extension || imageFile.size > 5 * 1024 * 1024) {
-    throw new Error("Choose a valid image under 5 MB.");
-  }
+    if (!extension || imageFile.size > 5 * 1024 * 1024) {
+      throw new Error("Choose a valid image under 5 MB.");
+    }
 
-  const imagePath = `${session.user.id}/${crypto.randomUUID()}.${extension}`;
-  const { error: uploadError } = await supabase.storage
-    .from("product-images")
-    .upload(imagePath, imageFile, {
-      contentType: imageFile.type,
-      upsert: false,
+    const imagePath = `${session.user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(imagePath, imageFile, {
+        contentType: imageFile.type,
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const response = await fetch("/api/products", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ name, price, imagePath }),
     });
 
-  if (uploadError) throw uploadError;
+    const savedProduct = await response.json();
 
-  const response = await fetch("/api/products", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ name, price, imagePath }),
-  });
+    if (!response.ok) {
+      throw new Error(savedProduct.message || "Could not save product.");
+    }
 
-  const savedProduct = await response.json();
-
-  if (!response.ok) {
-    throw new Error(savedProduct.message || "Could not save product.");
+    setProducts((currentProducts) => [
+      ...currentProducts,
+      { ...savedProduct, price: Number(savedProduct.price) },
+    ]);
   }
 
-  setProducts((currentProducts) => [
-    ...currentProducts,
-    { ...savedProduct, price: Number(savedProduct.price) },
-  ]);
-}
+  async function handleUpdateProductImage(productId, imageFile) {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+    if (!session) throw new Error("Please sign in again.");
+
+    const extensions = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+    const extension = extensions[imageFile?.type];
+
+    if (!extension || imageFile.size > 5 * 1024 * 1024) {
+      throw new Error("Choose a JPEG, PNG, or WebP image under 5 MB.");
+    }
+
+    const imagePath = `${session.user.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(imagePath, imageFile, {
+        contentType: imageFile.type,
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const response = await fetch(`/api/products/${productId}/image`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ imagePath }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Could not update product photo.");
+    }
+
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === result.id
+          ? { ...product, ...result, price: Number(result.price) }
+          : product,
+      ),
+    );
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -335,6 +389,7 @@ export default function Admin() {
             products={products}
             onAdd={handleAddProduct}
             onRemove={handleRemoveProduct}
+            onUpdateImage={handleUpdateProductImage}
           />
         )}
         <p>
