@@ -63,7 +63,8 @@ export default function AdminProducts({
     setUpdatingImageProductId(productId);
 
     try {
-      await onUpdateImage(productId, imageFile);
+      const warning = await onUpdateImage(productId, imageFile);
+      if (warning) setImageError(warning);
     } catch (error) {
       console.error("Could not update product photo:", error);
       setImageError("Could not update product photo. Please try again.");

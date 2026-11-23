@@ -218,6 +218,10 @@ export default function Admin() {
       error: sessionError,
     } = await supabase.auth.getSession();
 
+    const oldImagePath = products.find(
+      (product) => product.id === productId,
+    )?.imagePath;
+
     if (sessionError) throw sessionError;
     if (!session) throw new Error("Please sign in again.");
 
@@ -264,6 +268,20 @@ export default function Admin() {
           : product,
       ),
     );
+    if (oldImagePath && oldImagePath !== imagePath) {
+      const { data: deletedFiles, error: deleteError } = await supabase.storage
+        .from("product-images")
+        .remove([oldImagePath]);
+
+      if (deleteError || !deletedFiles?.length) {
+        const reason = deleteError
+          ? deleteError.message
+          : "Storage did not confirm that a file was deleted.";
+
+        console.error("Could not remove old product photo:", reason);
+        return "Photo updated, but the old image could not be removed from storage.";
+      }
+    }
   }
 
   useEffect(() => {
@@ -367,7 +385,11 @@ export default function Admin() {
         )}
         <div className="admin-analytics">
           <AdminRevenueChart />
-          <AdminPopularProducts />
+          <AdminPopularProducts
+            orders={orders}
+            isLoading={isOrdersLoading}
+            error={ordersError}
+          />
         </div>
         {!isOrdersLoading && !ordersError && (
           <AdminOrders
