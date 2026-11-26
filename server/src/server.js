@@ -280,6 +280,7 @@ app.get("/api/orders", requireAdmin, async (req, res) => {
          o.status,
          o.payment_status AS "paymentStatus",
          o.created_at AS "createdAt",
+         o.paid_at AS "paidAt",
          COALESCE(SUM(oi.quantity), 0)::integer AS boxes,
          COALESCE(
            json_agg(
@@ -358,9 +359,15 @@ app.patch("/api/orders/:id/payment-status", requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE public.orders
-       SET payment_status = $2
-       WHERE id = $1
-       RETURNING id, payment_status AS "paymentStatus"`,
+ SET payment_status = $2,
+     paid_at = CASE
+       WHEN $2 = 'paid' THEN COALESCE(paid_at, NOW())
+       ELSE NULL
+     END
+ WHERE id = $1
+ RETURNING id,
+           payment_status AS "paymentStatus",
+           paid_at AS "paidAt"`,
       [id, paymentStatus],
     );
 
