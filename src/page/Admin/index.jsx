@@ -33,8 +33,11 @@ export default function Admin() {
     (order) => manilaDateFormatter.format(new Date(order.createdAt)) === today,
   );
 
-  const paidOrdersToday = ordersToday.filter(
-    (order) => order.paymentStatus === "paid",
+  const paidOrdersToday = orders.filter(
+    (order) =>
+      order.paymentStatus === "paid" &&
+      order.paidAt &&
+      manilaDateFormatter.format(new Date(order.paidAt)) === today,
   );
 
   const salesToday = paidOrdersToday.reduce(
@@ -149,7 +152,11 @@ export default function Admin() {
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
           order.id === result.id
-            ? { ...order, paymentStatus: result.paymentStatus }
+            ? {
+                ...order,
+                paymentStatus: result.paymentStatus,
+                paidAt: result.paidAt,
+              }
             : order,
         ),
       );
